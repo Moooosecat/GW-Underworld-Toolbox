@@ -13,6 +13,7 @@ How to use:<br>
 -At the top dropdown menu select your current character on the account you wish to inject (Note: You can run multiple copies of Underworld toolbox).<br>
 -Hit "Inject" to inject toolbox into your game. <br>
 -Use the functions as desired.<br>
+-Bot must be exited and restarted on character reroll. Occassionally needs rebooted on disconnect.
 
 Quest Dialog:<br>
 Accept any quest from a reaper, even if they have aggro. Does not work if the quest is not available yet.<br>
@@ -40,3 +41,8 @@ Doesn't matter where skills are located on skill bar.<br>
 
 Custom Dialog: <br>
 Use to force dialog into the game. (Removed TB feature)
+
+Assign Hotkey: <br>
+In "<Assign Key>" play any key represented by the character on that key. Select the desired action to be associated with that key. To confirm press "Update". <br>
+You can overwrite existing hotkeys by assinging a new key. "Update" will always overwrite the old key for that hotkey.
+Hotkeys can be used while the Underworld Toolbox window is minimized (Great for T2)
