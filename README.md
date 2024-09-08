@@ -4,8 +4,6 @@ The developer is not responsible for any misuse or illegal use of this software.
 
 
 
-
-
 How to use:<br>
 -Install Underworld Toolbox application.<br>
 -Launch GW application and log in. Launch GW toolbox if desired.<br>
@@ -14,6 +12,7 @@ How to use:<br>
 -Hit "Inject" to inject toolbox into your game. <br>
 -Use the functions as desired.<br>
 -Bot must be exited and restarted on character reroll. Occassionally needs rebooted on disconnect.
+-Bot will be labeled as malware due to its injection method and .exe with windows defender. Pending certification with MS Defender.
 
 Quest Dialog:<br>
 Accept any quest from a reaper, even if they have aggro. Does not work if the quest is not available yet.<br>
@@ -38,6 +37,18 @@ Must have PI on skillbar to use.<br>
 Must be inside of dhuum chamber to use.<br>
 Will detect when dhuum casts Dhuum's Judgement and cast the DB Chain of PI>SQ>QZ.<br>
 Doesn't matter where skills are located on skill bar.<br>
+
+Fast Bond:<br>
+Must have Ether Renewal on skillbar.<br>
+Only available to Ele primary.<br>
+When you load into an instance, it will wait for cons, move back, and bond the LT/Self/Duo pull (if applicable).<br>
+
+Emo Energy:<br>
+Maintain your energy with ease.<br>
+Will recast any missing enchantments before spamming burning speed.<br>
+Will only cast burning speed while under the effects of ER, when energy is below 95%, or when health is below 95%.<br>
+Will not cast while moving, although moving may be difficult with spam.<br>
+May conflict with Fuse Pull.<br>
 
 Custom Dialog: <br>
 Use to force dialog into the game. (Removed TB feature)
