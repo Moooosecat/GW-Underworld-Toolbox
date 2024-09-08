@@ -54,6 +54,6 @@ Custom Dialog: <br>
 Use to force dialog into the game. (Removed TB feature)
 
 Assign Hotkey: <br>
-In "<Assign Key>" play any key represented by the character on that key. Select the desired action to be associated with that key. To confirm press "Update". <br>
+In "Assign Key" insert any key represented by the character of that key. Select the desired action to be associated with that hotkey. To confirm press "Update". <br>
 You can overwrite existing hotkeys by assinging a new key. "Update" will always overwrite the old key for that hotkey.
-Hotkeys can be used while the Underworld Toolbox window is minimized (Great for T2)
+Hotkeys can be used while the Underworld Toolbox window is minimized.
