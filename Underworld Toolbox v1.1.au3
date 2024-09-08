@@ -22,6 +22,19 @@ Added Fuse pull for emo
 	-will automatically run to casting range and cast fuse on first M/E or M/A within 4500 range.
 	-Only available in UI if primary is an elementalist to prevent accidental clicks and ruining terra runs.
 
+9/8/24
+Updated Logic for Auto DB and Fuse pull to only check for skills once.
+Updated EE mini function to locate EE on the skill bar.
+Updated GUI calling to be more consistent and fix issues within the script
+Added Fast Bond function:
+	-Only shows to elementalist primaries.
+	-Bonds closest target to lab quest NPC (assumes its LT), then bonds self, and then the closest ally to right stairs
+	-activates upon new instance but can remain checked for next run.
+	-Can be used with Emo Energy
+Added Emo Energy function:
+	-Only shows to elementalist primaries.
+	-Maintains your enchantments and uses burning speed.
+	-pauses while moving.
 
 
 ######################################################
@@ -64,21 +77,33 @@ Global Const $doLoadLoggedChars = True
 ;~ Global $color2 = 0xB19CD9
 Global $color2 = 0
 Global $color1 = 0x00FF11
+Global $CurrentMap
 Global $RenderingEnabled = True
 Global $BotRunning = False
 Global $BotInitialized = False
 Global $ChatStuckTimer = TimerInit()
 Global $BAG_SLOTS[18] = [0, 20, 5, 10, 10, 20, 41, 12, 20, 20, 20, 20, 20, 20, 20, 20, 20, 9]
 Global $DBToggle = False
+Global $FastbondToggle = False
+Global $EmoEnergyToggle = False
 Global $gPILocation = -1
 Global $gSQLocation = -1
 Global $gQZLocation = -1
+Global $gEELocation = -1
 Global $gInfuseHealthLocation = -1
+Global $gBurningSpeedLocation = -1
+Global $gEtherRenewalLocation = -1
+Global $gProtBondLocation = -1
+Global $gLifeBondLocation = -1
+Global $gBalthSpiritLocation = -1
+Global $gAuraOfRestoLocation = -1
+Global $gSpiritBondLocation = -1
+Global $gGDWLocation = -1
 
 #EndRegion Declarations / variables
 
 #Region GUI
-Global Const $mainGui = GUICreate("Underworld Toolbox V1.1", 310, 310, -1, -1, -1, $WS_EX_TOPMOST)
+Global Const $mainGui = GUICreate("Underworld Toolbox V1.1", 310, 300, -1, -1, -1, $WS_EX_TOPMOST)
 GUISetOnEvent($GUI_EVENT_CLOSE, "Exit2")
 
 Func exit2()
@@ -98,13 +123,13 @@ GUICtrlSetColor($GLOGBOX, 0)
 GUICtrlSetBkColor($GLOGBOX, 0x00FF22)
 GUISetState(@SW_SHOW)
 
-#Region ████████████████████████████████████████████ Buttons ████████████████████████████████████████████
+#Region ████████████████████████████████████████████ Buttons 			████████████████████████████████████████████
 
 ;Description:  Creates text, text field, and button for SubmitDialog()
 Global $InputFieldText = GUICtrlCreateLabel("Custom Dialog Input:", 5, 260, 110, 21)
 Global $Dialog_Input = GUICtrlCreateInput("0x", 110, 257, 90, 21)
 Global $Dialog_Submit = GUICtrlCreateButton("Send:", 205, 257, 50, 21)
-GUICtrlSetOnEvent(-1, "SubmitDialog")
+GUICtrlSetOnEvent($Dialog_Submit, "SubmitDialog")
 Func SubmitDialog()
 	Local $inputText = GUICtrlRead($Dialog_Input)
 	Out("Submitted Dialog:  " & $inputText)
@@ -116,14 +141,15 @@ EndFunc   ;==>SubmitDialog
 Global Const $Button = GUICtrlCreateButton("Inject", 155, 5, 150, 25)
 GUICtrlSetColor($Button, 0)
 GUICtrlSetBkColor($Button, 0x00FF11)
-GUICtrlSetOnEvent(-1, "GuiButtonHandler")
+GUICtrlSetOnEvent($Button, "GuiButtonHandler")
 
+#Region ████████████████████████████████████████████ Quest Dialogs		████████████████████████████████████████████
 ;Description: All of the buttons to take quests in UW
 GUICtrlCreateGroup("_______________Quest Dialogs____________________", 5, 35, 300, 65, $SS_Center)
 GUICtrlSetResizing(-1, $GUI_DOCKALL)
 
 Global Const $ChamberQButton = GUICtrlCreateButton("Chamber", 10, 55, 50, 20)
-GUICtrlSetOnEvent(-1, "ChamberQButton")
+GUICtrlSetOnEvent($ChamberQButton, "ChamberQButton")
 Func ChamberQButton()
 	Out("Chamber Quest Take")
 	Dialog(0x806501)
@@ -131,7 +157,7 @@ Func ChamberQButton()
 EndFunc   ;==>ChamberQButton
 
 Global Const $RestoreButton = GUICtrlCreateButton("Restore", 70, 55, 50, 20)
-GUICtrlSetOnEvent(-1, "RestoreButton")
+GUICtrlSetOnEvent($RestoreButton, "RestoreButton")
 Func RestoreButton()
 	Out("Restore Quest Take")
 	Dialog(0x806D01)
@@ -139,7 +165,7 @@ Func RestoreButton()
 EndFunc   ;==>RestoreButton
 
 Global Const $EscortButton = GUICtrlCreateButton("Escort", 130, 55, 50, 20)
-GUICtrlSetOnEvent(-1, "EscortButton")
+GUICtrlSetOnEvent($EscortButton, "EscortButton")
 Func EscortButton()
 	Out("Escort Quest Take")
 	Dialog(0x806C01)
@@ -147,7 +173,7 @@ Func EscortButton()
 EndFunc   ;==>EscortButton
 
 Global Const $UWGButton = GUICtrlCreateButton("UWG", 190, 55, 50, 20)
-GUICtrlSetOnEvent(-1, "UWGButton")
+GUICtrlSetOnEvent($UWGButton, "UWGButton")
 Func UWGButton()
 	Out("UWG Quest Take")
 	Dialog(0x806701)
@@ -155,7 +181,7 @@ Func UWGButton()
 EndFunc   ;==>UWGButton
 
 Global Const $ValeQButton = GUICtrlCreateButton("ValeQ", 250, 55, 50, 20)
-GUICtrlSetOnEvent(-1, "ValeQButton")
+GUICtrlSetOnEvent($ValeQButton, "ValeQButton")
 Func ValeQButton()
 	Out("Vale Quest Take")
 	Dialog(0x806E01)
@@ -163,7 +189,7 @@ Func ValeQButton()
 EndFunc   ;==>ValeQButton
 
 Global Const $MtnsQButton = GUICtrlCreateButton("MtnsQ", 10, 75, 50, 20)
-GUICtrlSetOnEvent(-1, "MtnsQButton")
+GUICtrlSetOnEvent($MtnsQButton, "MtnsQButton")
 Func MtnsQButton()
 	Out("Mtns Quest Take")
 	Dialog(0x806801)
@@ -172,7 +198,7 @@ EndFunc   ;==>MtnsQButton
 
 
 Global Const $PoolsQButton = GUICtrlCreateButton("PoolsQ", 70, 75, 50, 20)
-GUICtrlSetOnEvent(-1, "PoolsQButton")
+GUICtrlSetOnEvent($PoolsQButton, "PoolsQButton")
 Func PoolsQButton()
 	Out("Pools Quest Take")
 	Dialog(0x806B01)
@@ -180,7 +206,7 @@ Func PoolsQButton()
 EndFunc   ;==>PoolsQButton
 
 Global Const $PitsQButton = GUICtrlCreateButton("PitsQ", 130, 75, 50, 20)
-GUICtrlSetOnEvent(-1, "PitsQButton")
+GUICtrlSetOnEvent($PitsQButton, "PitsQButton")
 Func PitsQButton()
 	Out("Pits Quest Take")
 	Dialog(0x806801)
@@ -188,7 +214,7 @@ Func PitsQButton()
 EndFunc   ;==>PitsQButton
 
 Global Const $PlainsQButton = GUICtrlCreateButton("PlainsQ", 190, 75, 50, 20)
-GUICtrlSetOnEvent(-1, "PlainsQButton")
+GUICtrlSetOnEvent($PlainsQButton, "PlainsQButton")
 Func PlainsQButton()
 	Out("Plains Quest Take")
 	Dialog(0x806801)
@@ -196,20 +222,23 @@ Func PlainsQButton()
 EndFunc   ;==>PlainsQButton
 
 Global Const $WastesQButton = GUICtrlCreateButton("WastesQ", 250, 75, 50, 20)
-GUICtrlSetOnEvent(-1, "WastesQButton")
+GUICtrlSetOnEvent($WastesQButton, "WastesQButton")
 Func WastesQButton()
 	Out("Wastes Quest Take")
 	Dialog(0x806601)
 	Sleep(100)
 EndFunc   ;==>WastesQButton
 
+#EndRegion ████████████████████████████████████████████ Quest Dialogs		████████████████████████████████████████████
+
+#Region ████████████████████████████████████████████ Teleport Dialogs	████████████████████████████████████████████
 ;Description: Dialogs for Teleporting in UW
 GUICtrlCreateGroup("_____________Teleport Dialogs____________", 5, 100, 240, 65, $SS_Center)
 GUICtrlSetResizing(-1, $GUI_DOCKALL)
 
 
 Global Const $LabTeleButton = GUICtrlCreateButton("Lab", 10, 120, 50, 20)
-GUICtrlSetOnEvent(-1, "LabTeleButton")
+GUICtrlSetOnEvent($LabTeleButton, "LabTeleButton")
 Func LabTeleButton()
 	Out("Lab Tele")
 	Dialog(0x8D)
@@ -217,7 +246,7 @@ Func LabTeleButton()
 EndFunc   ;==>LabTeleButton
 
 Global Const $ValeTeleButton = GUICtrlCreateButton("Vale", 10, 140, 50, 20)
-GUICtrlSetOnEvent(-1, "ValeTeleButton")
+GUICtrlSetOnEvent($ValeTeleButton, "ValeTeleButton")
 Func ValeTeleButton()
 	Out("Vale Tele")
 	Dialog(0x91)
@@ -225,7 +254,7 @@ Func ValeTeleButton()
 EndFunc   ;==>ValeTeleButton
 
 Global Const $MtnTeleButton = GUICtrlCreateButton("Mtns", 70, 120, 50, 20)
-GUICtrlSetOnEvent(-1, "MtnTeleButton")
+GUICtrlSetOnEvent($MtnTeleButton, "MtnTeleButton")
 Func MtnTeleButton()
 	Out("Mtn Tele")
 	Dialog(0x8E)
@@ -233,7 +262,7 @@ Func MtnTeleButton()
 EndFunc   ;==>MtnTeleButton
 
 Global Const $PoolsTeleButton = GUICtrlCreateButton("Pools", 70, 140, 50, 20)
-GUICtrlSetOnEvent(-1, "PoolsTeleButton")
+GUICtrlSetOnEvent($PoolsTeleButton, "PoolsTeleButton")
 Func PoolsTeleButton()
 	Out("Pools Tele")
 	Dialog(0x90)
@@ -241,7 +270,7 @@ Func PoolsTeleButton()
 EndFunc   ;==>PoolsTeleButton
 
 Global Const $PitsTeleButton = GUICtrlCreateButton("Pits", 130, 120, 50, 20)
-GUICtrlSetOnEvent(-1, "PitsTeleButton")
+GUICtrlSetOnEvent($PitsTeleButton, "PitsTeleButton")
 Func PitsTeleButton()
 	Out("Pits Tele")
 	Dialog(0x8F)
@@ -249,7 +278,7 @@ Func PitsTeleButton()
 EndFunc   ;==>PitsTeleButton
 
 Global Const $PlainsTeleButton = GUICtrlCreateButton("Plains", 130, 140, 50, 20)
-GUICtrlSetOnEvent(-1, "PlainsTeleButton")
+GUICtrlSetOnEvent($PlainsTeleButton, "PlainsTeleButton")
 Func PlainsTeleButton()
 	Out("Plains Tele")
 	Dialog(0x8B)
@@ -257,36 +286,63 @@ Func PlainsTeleButton()
 EndFunc   ;==>PlainsTeleButton
 
 Global Const $WastesTeleButton = GUICtrlCreateButton("Wastes", 190, 120, 50, 20)
-GUICtrlSetOnEvent(-1, "WastesTeleButton")
+GUICtrlSetOnEvent($WastesTeleButton, "WastesTeleButton")
 Func WastesTeleButton()
 	Out("Wastes Tele")
 	Dialog(0x8C)
 	Sleep(100)
 EndFunc   ;==>WastesTeleButton
+#EndRegion ████████████████████████████████████████████ Teleport Dialogs	████████████████████████████████████████████
 
-
-#Region ██████████████████████████████████Target Minipets ████████████████████████████████████████
+#Region ████████████████████████████████████████████Target Minipets 	████████████████████████████████████████████
 Global Const $MiniButton = GUICtrlCreateButton("EE Mini", 250, 120, 50, 20)
-GUICtrlSetOnEvent(-1, "MiniButton")
+GUICtrlSetOnEvent($MiniButton, "MiniButton")
 Func MiniButton()
 	GUICtrlSetState($MiniButton, $GUI_DISABLE)
+	If $gEELocation = -1 Then
+		For $i = 1 To 8
+			Switch getskillbarskillid($i)
+				Case 2420 ;EE
+					$gEELocation = $i
+;~ 					Out("Ebon Escape Skill Slot: " & $gEELocation)
+			EndSwitch
+		Next
+	EndIf
+	If $gEELocation = -1 Then
+		Out("EE Not equipped")
+		GUICtrlSetState($MiniButton, $GUI_ENABLE)
+		Return False
+	EndIf
+	If Getagentbymodelid(350) = 0 Or Getagentbymodelid(350) = "" Then
+		Out("No mini rift warden")
+		GUICtrlSetState($MiniButton, $GUI_ENABLE)
+		Return False
+	EndIf
 	Out("Target mini")
-	Useskill(8, Getagentbymodelid(350))
+	Useskill($gEELocation, Getagentbymodelid(350))
 	Sleep(100)
 	GUICtrlSetState($MiniButton, $GUI_ENABLE)
 EndFunc   ;==>MiniButton
-
-;~ HotKeySet(",", "HotkeyTargetMini")
-Func HotkeyTargetMini()
-;~ 	Useskill(8,GetNearestAgentToAgent(-2))
-	Useskill(8, Getagentbymodelid(350))
-	Sleep(750)
-EndFunc   ;==>HotkeyTargetMini
-
+#EndRegion ████████████████████████████████████████████Target Minipets 	████████████████████████████████████████████
+#Region ████████████████████████████████████████████ Fuse Pull 			████████████████████████████████████████████
 Global Const $FusePull = GUICtrlCreateButton("FusePull", 250, 100, 50, 20)
-GUICtrlSetOnEvent(-1, "FusePull")
+GUICtrlSetOnEvent($FusePull, "FusePull")
 
 Func FusePull()
+
+	If $gInfuseHealthLocation = -1 Then
+		For $i = 1 To 8
+			Switch getskillbarskillid($i)
+				Case 292 ;infuse health
+					$gInfuseHealthLocation = $i
+;~ 					Out("Infuse Skill Slot: " & $gInfuseHealthLocation)
+			EndSwitch
+		Next
+	EndIf
+	If $gInfuseHealthLocation = -1 Then
+		Out("Infuse Not equipped")
+		Return False
+	EndIf
 	GUICtrlSetState($FusePull, $GUI_DISABLE)
 	Local $PartyArray = getparty()
 	Local $primaryProfession, $secondaryProfession
@@ -298,7 +354,7 @@ Func FusePull()
 		$primaryProfession = DllStructGetData($PartyArray[$i], "Primary")
 		$secondaryProfession = DllStructGetData($PartyArray[$i], "Secondary")
 		Out($i & "  " & $primaryProfession & "  " & $secondaryProfession)
-		If $primaryProfession = 5 And ($secondaryProfession = 7 Or $secondaryProfession = 6) and GetDistance($PartyArray[$i], -2) < 4500 Then
+		If $primaryProfession = 5 And ($secondaryProfession = 7 Or $secondaryProfession = 6) And GetDistance($PartyArray[$i], -2) < 4500 Then
 			Out("Moving to Tank")
 ;~ 			Do
 			While GetDistance($PartyArray[$i], -2) > 1300 Or $timeout > 1000
@@ -329,15 +385,15 @@ EndFunc   ;==>FusePull
 
 
 
-#EndRegion ██████████████████████████████████Target Minipets ████████████████████████████████████████
-#Region ██████████████████████████████████Hotkey options ████████████████████████████████████████
+#EndRegion ████████████████████████████████████████████ Fuse Pull 			████████████████████████████████████████████
+#Region ████████████████████████████████████████████Hotkey options 		████████████████████████████████████████████
 Global $Hotkey1Text = GUICtrlCreateLabel("Hotkey 1:", 5, 173, 55, 17)
 Global $Hotkey1Input = GUICtrlCreateInput("<Assign Key>", 55, 170, 70, 21)
 Global Const $Hotkey1_Dropdown = GUICtrlCreateCombo("<SELECT ACTION>", 130, 170, 120, 21, BitOR($CBS_DROPDOWN, $WS_VSCROLL))
-GUICtrlSetData(-1, "Q Chamber|Q Restore|Q Escort|Q UWG|Q Vale|Q Mtns|Q Pools|Q Pits|Q Plains|Q Wastes|Tele Lab|Tele Vale|Tele Mtns|Tele Pools|Tele Pits|Tele Plains|Tele Wastes|EE Mini")
-GUICtrlSetResizing(-1, $GUI_DOCKALL)
+GUICtrlSetData($Hotkey1_Dropdown, "Q Chamber|Q Restore|Q Escort|Q UWG|Q Vale|Q Mtns|Q Pools|Q Pits|Q Plains|Q Wastes|Tele Lab|Tele Vale|Tele Mtns|Tele Pools|Tele Pits|Tele Plains|Tele Wastes|EE Mini")
+GUICtrlSetResizing($Hotkey1_Dropdown, $GUI_DOCKALL)
 Global $Hotkey1_Submit = GUICtrlCreateButton("Update", 255, 170, 50, 21)
-GUICtrlSetOnEvent(-1, "Hotkey1_Submit")
+GUICtrlSetOnEvent($Hotkey1_Submit, "Hotkey1_Submit")
 
 Func Hotkey1_Submit()
 	Local $inputValue = GUICtrlRead($Hotkey1Input)
@@ -397,10 +453,10 @@ Global $Hotkey2Input = GUICtrlCreateInput("<Assign Key>", 55, 190, 70, 21)
 ;~ GUICtrlSetState($Hotkey1Input, $GUI_DISABLE)
 
 Global Const $Hotkey2_Dropdown = GUICtrlCreateCombo("<SELECT ACTION>", 130, 190, 120, 21, BitOR($CBS_DROPDOWN, $WS_VSCROLL))
-GUICtrlSetData(-1, "Q Chamber|Q Restore|Q Escort|Q UWG|Q Vale|Q Mtns|Q Pools|Q Pits|Q Plains|Q Wastes|Tele Lab|Tele Vale|Tele Mtns|Tele Pools|Tele Pits|Tele Plains|Tele Wastes|EE Mini")
-GUICtrlSetResizing(-1, $GUI_DOCKALL)
+GUICtrlSetData($Hotkey2_Dropdown, "Q Chamber|Q Restore|Q Escort|Q UWG|Q Vale|Q Mtns|Q Pools|Q Pits|Q Plains|Q Wastes|Tele Lab|Tele Vale|Tele Mtns|Tele Pools|Tele Pits|Tele Plains|Tele Wastes|EE Mini")
+GUICtrlSetResizing($Hotkey2_Dropdown, $GUI_DOCKALL)
 Global $Hotkey2_Submit = GUICtrlCreateButton("Update", 255, 190, 50, 21)
-GUICtrlSetOnEvent(-1, "Hotkey2_Submit")
+GUICtrlSetOnEvent($Hotkey2_Submit, "Hotkey2_Submit")
 
 Func Hotkey2_Submit()
 	Local $inputValue = GUICtrlRead($Hotkey2Input)
@@ -456,28 +512,24 @@ Func HotKeyInputCheck2()
 	EndSwitch
 EndFunc   ;==>HotKeyInputCheck2
 
-#EndRegion ██████████████████████████████████Hotkey options ████████████████████████████████████████
+#EndRegion ████████████████████████████████████████████Hotkey options 		████████████████████████████████████████████
 
 
-#EndRegion ████████████████████████████████████████████ Buttons ████████████████████████████████████████████
-
-
-
-
-Global Const $AutoDBCheckbox = GUICtrlCreateCheckbox("Auto DB", 5, 280, 129, 15)
-GUICtrlSetState(-1, $GUI_UNCHECKED)
-GUICtrlSetOnEvent(-1, "DhuumBitchToggle")
+#Region ████████████████████████████████████████████ Auto DB			 ████████████████████████████████████████████
+Global Const $AutoDBCheckbox = GUICtrlCreateCheckbox("Auto DB", 5, 280, 60, 15)
+GUICtrlSetState($AutoDBCheckbox, $GUI_UNCHECKED)
+GUICtrlSetOnEvent($AutoDBCheckbox, "DhuumBitchToggle")
 
 Func DhuumBitchToggle()
 	If $DBToggle = True Then
 		$DBToggle = False
-		GUICtrlSetState(-1, $GUI_UNCHECKED)
+		GUICtrlSetState($AutoDBCheckbox, $GUI_UNCHECKED)
 		Out("Dhuum Bitch toggle off")
 		Return False
 	EndIf
 	If $DBToggle = False Then
 		$DBToggle = True
-		GUICtrlSetState(-1, $GUI_CHECKED)
+		GUICtrlSetState($AutoDBCheckbox, $GUI_CHECKED)
 		Out("Dhuum Bitch toggle on")
 		For $i = 1 To 8
 			Switch getskillbarskillid($i)
@@ -521,8 +573,187 @@ Func DhuumBitch()
 		EndIf
 	EndIf
 EndFunc   ;==>DhuumBitch
+#EndRegion ████████████████████████████████████████████ Auto DB			 ████████████████████████████████████████████
+#Region ████████████████████████████████████████████ Fast Bond			 ████████████████████████████████████████████
+Global Const $FastToggleCheckbox = GUICtrlCreateCheckbox("Fast Bond", 70, 280, 65, 15)
+GUICtrlSetState($FastToggleCheckbox, $GUI_UNCHECKED)
+GUICtrlSetOnEvent($FastToggleCheckbox, "FastBondToggle")
+
+Func FastBondToggle()
+	If $FastbondToggle = True Then
+		$FastbondToggle = False
+		GUICtrlSetState($FastToggleCheckbox, $GUI_UNCHECKED)
+		Out("Fast Bond toggle off")
+		Return False
+	EndIf
+	If $FastbondToggle = False Then
+		$FastbondToggle = True
+		GUICtrlSetState($FastToggleCheckbox, $GUI_CHECKED)
+		Out("Fast Bond toggle on")
+		For $i = 1 To 8
+			Switch getskillbarskillid($i)
+				Case 263 ;Prot bond
+					$gProtBondLocation = $i
+;~ 					Out("Protbond Skill Slot: " & $gProtBondLocation)
+				Case 241 ;Life Bond
+					$gLifeBondLocation = $i
+;~ 					Out("LifeBond Slot: " & $gLifeBondLocation)
+				Case 242 ;Balth
+					$gBalthSpiritLocation = $i
+;~ 					Out("Balth Spirit Skill Slot: " & $gBalthSpiritLocation)
+				Case 181 ;ER
+					$gEtherRenewalLocation = $i
+;~ 					Out("Ether Ren Skill Slot: " & $gEtherRenewalLocation)
+				Case 180 ;Aura of Restor
+					$gAuraOfRestoLocation = $i
+;~ 					Out("Aura of Rest Skill Slot: " & $gAuraOfRestoLocation)
+			EndSwitch
+		Next
+	EndIf
+EndFunc   ;==>FastBondToggle
+
+Func FastBond()
+	Local $lt
+	If $gProtBondLocation = -1 Then
+		Out("You do not have Prot Bond Equipped")
+		FastBondToggle()
+		Return False
+	EndIf
+;~ 	If Checkarea(724.00, 6875.00, 1200) = False Then
+;~ 		Out("Not At Start")
+;~ 		FastBondToggle()
+;~ 		Return False
+;~ 	EndIf
+	If GetMapID() = 72 And checkarea(724.00, 6875.00, 1200) Then moveto(1248.00, 6816.00)
+	While haseffect(2522) = False And GetMapID() = 72 ;wait for conset
+		Sleep(100)
+	WEnd
+	Useskill($gEtherRenewalLocation, -2) ;Ether Renewal)
+	Sleep(1700)
+	If $gAuraOfRestoLocation <> -1 Then
+		Useskill($gAuraOfRestoLocation, -2)
+		Sleep(900)
+	EndIf
+	$lt = GetNearestAgentToCoords(272, 6915)
+	If $gProtBondLocation <> -1 Then
+		Useskill($gProtBondLocation, $lt)
+		Sleep(2500)
+	EndIf
+	If $gLifeBondLocation <> -1 Then
+		Useskill($gLifeBondLocation, $lt)
+		Sleep(2500)
+	EndIf
+	If $gBalthSpiritLocation <> -1 Then
+		Useskill($gBalthSpiritLocation, $lt)
+		Sleep(2500)
+	EndIf
+	If $gBalthSpiritLocation <> -1 Then
+		Useskill($gBalthSpiritLocation, -2)
+		Sleep(2500)
+	EndIf
+	If $gProtBondLocation <> -1 Then
+		Useskill($gProtBondLocation, GetNearestAgentToCoords(968, 7605)) ;Dual Pull target
+		Sleep(2500)
+	EndIf
+	If $gProtBondLocation <> -1 Then
+		Useskill($gProtBondLocation, -2) ;self
+		Sleep(2500)
+	EndIf
+	Out("Fast Bond complete!")
+EndFunc   ;==>FastBond
+#EndRegion ████████████████████████████████████████████ Fast Bond			 ████████████████████████████████████████████
+#Region ████████████████████████████████████████████ Maintain Energy		 ████████████████████████████████████████████
+Global Const $EmoEnergyCheckbox = GUICtrlCreateCheckbox("Emo Energy", 140, 280, 73, 15)
+GUICtrlSetState($EmoEnergyCheckbox, $GUI_UNCHECKED)
+GUICtrlSetOnEvent($EmoEnergyCheckbox, "EmoEnergyToggle")
+
+Func EmoEnergyToggle()
+	If $EmoEnergyToggle = True Then
+		$EmoEnergyToggle = False
+		GUICtrlSetState($EmoEnergyCheckbox, $GUI_UNCHECKED)
+		Out("Emo Energy toggle off")
+		Return False
+	EndIf
+	If $EmoEnergyToggle = False Then
+		$EmoEnergyToggle = True
+		GUICtrlSetState($EmoEnergyCheckbox, $GUI_CHECKED)
+		Out("Emo Energy toggle on")
+		For $i = 1 To 8
+			Switch getskillbarskillid($i)
+				Case 263 ;Prot bond
+					$gProtBondLocation = $i
+;~ 					Out("Protbond Skill Slot: " & $gProtBondLocation)
+				Case 242 ;Balth
+					$gBalthSpiritLocation = $i
+;~ 					Out("Balth Spirit Skill Slot: " & $gBalthSpiritLocation)
+				Case 181 ;ER
+					$gEtherRenewalLocation = $i
+;~ 					Out("Ether Ren Skill Slot: " & $gEtherRenewalLocation)
+				Case 180 ;Aura of Restor
+					$gAuraOfRestoLocation = $i
+;~ 					Out("Aura of Rest Skill Slot: " & $gAuraOfRestoLocation)
+				Case 1114 ;spirit bond
+					$gSpiritBondLocation = $i
+;~ 					Out("Spirit Bond Skill Slot: " & $gSpiritBondLocation)
+				Case 823 ;Burning Speed
+					$gBurningSpeedLocation = $i
+;~ 					Out("Spirit Bond Skill Slot: " & $gBurningSpeedLocation)
+			EndSwitch
+		Next
+	EndIf
+EndFunc   ;==>EmoEnergyToggle
+
+Func EmoEnergy()
+	Local $lt
+	If $gEtherRenewalLocation = -1 Then
+		Out("You do not have ER Equipped")
+		EmoEnergyToggle()
+		Return False
+	EndIf
+	Switch Getmaploading()
+		Case $INSTANCETYPE_EXPLORABLE
+			If GetIsMoving(-2) = False and haseffect(181) = false and $gEtherRenewalLocation <> -1 Then
+				useskill($gEtherRenewalLocation,-2)
+				sleep(1500)
+			EndIf
+			If GetIsMoving(-2) = False and haseffect(242) = false and $gBalthSpiritLocation <> -1 Then
+				useskill($gBalthSpiritLocation,-2)
+				sleep(2200)
+			EndIf
+			If GetIsMoving(-2) = False and haseffect(263) = false and $gProtBondLocation <> -1 Then
+				useskill($gProtBondLocation,-2)
+				sleep(2200)
+			EndIf
+			If GetIsMoving(-2) = False and haseffect(180) = false and $gAuraOfRestoLocation <> -1 Then
+				useskill($gAuraOfRestoLocation,-2)
+				sleep(900)
+			EndIf
+			If GetIsMoving(-2) = False and haseffect(1114) = false and $gSpiritBondLocation <> -1 Then
+				useskill($gSpiritBondLocation,-2)
+				sleep(900)
+			EndIf
+			 out(gethealth(-2))
+;~ 			If GetIsMoving(-2) = False and $gBurningSpeedLocation <> -1 and (DllStructGetData(GetAgentByID(-2), 'EnergyPercent') < 0.95 or DllStructGetData(GetAgentByID(-2), 'HealthPercent') < 0.95) And haseffect(181) Then
+			If GetIsMoving(-2) = False and $gBurningSpeedLocation <> -1 and (DllStructGetData(GetAgentByID(-2), 'EnergyPercent') < 0.95 or Gethealth(-2) <.95) And haseffect(181) Then
+				useskill($gBurningSpeedLocation,-2)
+				sleep(800)
+			EndIf
+		Case $INSTANCETYPE_OUTPOST
+			EmoEnergyToggle()
+			Return
+	EndSwitch
+
+EndFunc   ;==>EmoEnergy
+#EndRegion ████████████████████████████████████████████ Maintain Energy		 ████████████████████████████████████████████
 
 
+#EndRegion ████████████████████████████████████████████ Buttons 			████████████████████████████████████████████
+
+
+
+
+
+#Region ████████████████████████████████████████████ GUI Handling		████████████████████████████████████████████
 GUICtrlSetState($ChamberQButton, $GUI_DISABLE)
 GUICtrlSetState($RestoreButton, $GUI_DISABLE)
 GUICtrlSetState($EscortButton, $GUI_DISABLE)
@@ -554,6 +785,8 @@ GUICtrlSetState($Dialog_Input, $GUI_DISABLE)
 GUICtrlSetState($Dialog_Submit, $GUI_DISABLE)
 GUICtrlSetState($FusePull, $GUI_DISABLE)
 GUICtrlSetState($AutoDBCheckbox, $GUI_DISABLE)
+GUICtrlSetState($FastToggleCheckbox, $GUI_DISABLE)
+GUICtrlSetState($EmoEnergyCheckbox, $GUI_DISABLE)
 
 
 Func GuiButtonHandler()
@@ -579,7 +812,7 @@ Func GuiButtonHandler()
 ;~ 		Out("basepointer:" & Hex($mBasePointer, 8))
 		$BotRunning = True
 		$BotInitialized = True
-				Global $gPrimary = DllStructGetData(GetAgentbyID(-2), "Primary")
+		Global $gPrimary = DllStructGetData(GetAgentbyID(-2), "Primary")
 		Global $gSecondary = DllStructGetData(GetAgentbyID(-2), "Secondary")
 		Out("--------------------------------------------------------")
 		;Change Color of UI to signify initiation
@@ -634,7 +867,7 @@ Func GuiButtonHandler()
 		GUICtrlSetColor($MiniButton, 0xAD03DE)
 		GUICtrlSetBkColor($MiniButton, $color2)
 		;Enable GUI
-				GUICtrlSetState($ChamberQButton, $GUI_ENABLE)
+		GUICtrlSetState($ChamberQButton, $GUI_ENABLE)
 		GUICtrlSetState($RestoreButton, $GUI_ENABLE)
 		GUICtrlSetState($EscortButton, $GUI_ENABLE)
 		GUICtrlSetState($UWGButton, $GUI_ENABLE)
@@ -664,17 +897,20 @@ Func GuiButtonHandler()
 		GUICtrlSetState($Dialog_Input, $GUI_ENABLE)
 		GUICtrlSetState($Dialog_Submit, $GUI_ENABLE)
 		GUICtrlSetState($AutoDBCheckbox, $GUI_ENABLE)
-		If $gPrimary = 6 Then GUICtrlSetState($FusePull, $GUI_ENABLE)
+		GUICtrlSetState($AutoDBCheckbox, $GUI_ENABLE)
+		If $gPrimary = 6 Or $gPrimary = 3 Then GUICtrlSetState($FusePull, $GUI_ENABLE)
+		If $gPrimary = 6 Or $gPrimary = 3 Then GUICtrlSetState($FastToggleCheckbox, $GUI_ENABLE)
+		If $gPrimary = 6 Or $gPrimary = 3 Then GUICtrlSetState($EmoEnergyCheckbox, $GUI_ENABLE)
 
 	EndIf
 EndFunc   ;==>GuiButtonHandler
 
-Func GetChecked($GUICtrl)
-	Return (GUICtrlRead($GUICtrl) == $GUI_Checked)
-EndFunc   ;==>GetChecked
+#EndRegion ████████████████████████████████████████████ GUI Handling		████████████████████████████████████████████
+
 
 #EndRegion GUI
 
+#Region ████████████████████████████████████████████ MainLoop			████████████████████████████████████████████
 While Not $BotRunning
 	Sleep(100)
 WEnd
@@ -683,9 +919,17 @@ While 1
 	If $DBToggle = True Then
 		DhuumBitch()
 	EndIf
+	If $CurrentMap <> GetMapID() And $FastbondToggle = True And GetMapID() = 72 Then
+		Waitforload()
+		FastBond()
+	EndIf
+	$CurrentMap = GetMapID()
+	If $EmoEnergyToggle = True Then EmoEnergy()
 WEnd
+#EndRegion ████████████████████████████████████████████ MainLoop			████████████████████████████████████████████
 
-#Region Display/Counting Things
+
+#Region ████████████████████████████████████████████ Bonus Functions	████████████████████████████████████████████
 Func DisplayCounts()
 	Local $Mobstoppers = GetItemCountInventory(32558)
 	Local $CapturedSkeles = GetItemCountInventory(32559)
@@ -697,8 +941,6 @@ Func DisplayCounts()
 
 EndFunc   ;==>DisplayCounts
 
-#EndRegion Display/Counting Things
-
 
 ;~ Description: Print to console with timestamp
 Func Out($TEXT)
@@ -709,3 +951,4 @@ Func Out($TEXT)
 	_GUICtrlEdit_Scroll($GLOGBOX, 1)
 EndFunc   ;==>Out
 
+#EndRegion ████████████████████████████████████████████ Bonus Functions	████████████████████████████████████████████
